@@ -1,0 +1,6 @@
+{
+  "appId": "com.hse.kitcheninspection",
+  "appName": "ممیزی بهداشت و ایمنی آشپزخانه",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}
