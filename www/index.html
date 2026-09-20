@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>سیستم ممیزی بهداشت و ایمنی آشپزخانه</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Chart.js & SheetJS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <!-- هدر اصلی برنامه -->
+  <header class="app-header">
+    <div class="header-content">
+      <h1>سامانه بازرسی بهداشت و ایمنی (HSE)</h1>
+      <p class="subtitle">ممیزی جامع بهداشت، ایمنی و محیط زیست آشپزخانه و غذاخوری</p>
+    </div>
+    <!-- منوی ناوبری تب‌ها -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('new-audit')">ثبت بازرسی جدید</button>
+      <button class="tab-btn" onclick="switchTab('dashboard')">داشبورد تحلیلی</button>
+      <button class="tab-btn" onclick="switchTab('history')">سوابق و خروجی</button>
+    </nav>
+  </header>
+
+  <main class="container">
+
+    <!-- تب ۱: فرم ثبت بازرسی -->
+    <section id="tab-new-audit" class="tab-pane active">
+      <form id="audit-form" onsubmit="saveAudit(event)">
+        <!-- مشخصات سربرگ بازرسی -->
+        <div class="card header-card">
+          <h2 class="card-title">اطلاعات عمومی بازدید</h2>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>تاریخ و ساعت ممیزی:</label>
+              <input type="text" id="audit-date" readonly class="input-readonly">
+            </div>
+            <div class="form-group">
+              <label>نام و نام خانوادگی بازرس: <span class="req">*</span></label>
+              <input type="text" id="inspector-name" required placeholder="مثال: نرگس کاوندی">
+            </div>
+            <div class="form-group">
+              <label>واحد / موقعیت استقرار: <span class="req">*</span></label>
+              <select id="location-unit" required>
+                <option value="">-- انتخاب موقعیت --</option>
+                <option value="آشپزخانه اصلی (خط پخت)">آشپزخانه اصلی (خط پخت)</option>
+                <option value="سالن غذاخوری پرسنل">سالن غذاخوری پرسنل</option>
+                <option value="سردخانه بالاصفر و زیرصفر">سردخانه بالاصفر و زیرصفر</option>
+                <option value="انبار مواد غذایی خشک">انبار مواد غذایی خشک</option>
+                <option value="بخش آماده‌سازی و شستشو">بخش آماده‌سازی و شستشو</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>نوبت کاری (شیفت):</label>
+              <select id="shift">
+                <option value="روزکار / نوبت اول">روزکار / نوبت اول</option>
+                <option value="عصرکار / نوبت دوم">عصرکار / نوبت دوم</option>
+                <option value="شب‌کار">شب‌کار</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>دوره بازرسی:</label>
+              <select id="frequency">
+                <option value="روزانه">روزانه</option>
+                <option value="هفتگی">هفتگی</option>
+                <option value="ماهانه">ماهانه</option>
+                <option value="دوره‌ای / موردی">دوره‌ای / موردی</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>کد تجهیز / کد شناسایی بخش:</label>
+              <input type="text" id="equipment-tag" placeholder="مثال: KIT-SEC-01">
+            </div>
+          </div>
+        </div>
+
+        <!-- کانتینر سوالات و چک‌لیست ۱۸ بندی (تولید داینامیک از JS) -->
+        <div id="checklist-container"></div>
+
+        <!-- دکمه ثبت فرم -->
+        <div class="submit-bar">
+          <button type="submit" class="btn btn-primary btn-large">ثبت نهایی بازرسی و محاسبه ریسک</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- تب ۲: داشبورد تحلیلی و نمودارها -->
+    <section id="tab-dashboard" class="tab-pane">
+      <div class="stats-overview">
+        <div class="stat-card">
+          <span class="stat-value" id="stat-total">0</span>
+          <span class="stat-label">تعداد کل بازرسی‌ها</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value text-green" id="stat-avg-score">0%</span>
+          <span class="stat-label">میانگین انطباق بهداشتی</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value text-red" id="stat-non-conform">0</span>
+          <span class="stat-label">کل عدم انطباق‌های فعال</span>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="card chart-card">
+          <h3 class="card-title">نسبت انطباق بهداشتی و ایمنی</h3>
+          <div class="chart-wrapper">
+            <canvas id="complianceDoughnutChart"></canvas>
+          </div>
+        </div>
+        <div class="card chart-card">
+          <h3 class="card-title">میانگین عملکرد در بخش‌های پنج‌گانه</h3>
+          <div class="chart-wrapper">
+            <canvas id="categoryBarChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- تب ۳: تاریخچه، سوابق و خروجی اکسل -->
+    <section id="tab-history" class="tab-pane">
+      <div class="history-actions card">
+        <div class="actions-header">
+          <button onclick="exportAllToExcel()" class="btn btn-excel">
+            📊 خروجی اکسل تجمیعی (Excel RTL)
+          </button>
+          <input type="text" id="history-search" placeholder="جستجو بر اساس بازرس یا موقعیت..." oninput="filterHistory()">
+        </div>
+      </div>
+      <div id="history-list" class="history-list"></div>
+    </section>
+
+  </main>
+
+  <!-- مودال گزارش و پرینت تک‌بازدید -->
+  <div id="report-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>گزارش رسمی ممیزی بهداشت و ایمنی</h2>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+      <div class="modal-footer">
+        <button onclick="window.print()" class="btn btn-primary">🖨️ چاپ / ذخیره PDF</button>
+        <button onclick="exportCurrentToExcel()" class="btn btn-excel">دانلود اکسل این بازدید</button>
+        <button onclick="closeModal()" class="btn btn-secondary">بستن</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
