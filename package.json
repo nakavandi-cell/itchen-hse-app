@@ -1,0 +1,13 @@
+{
+  "name": "hse-kitchen-inspection",
+  "version": "1.0.0",
+  "description": "Kitchen and Dining HSE Inspection App",
+  "scripts": {
+    "build": "echo 'Web assets ready'"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0"
+  }
+}
